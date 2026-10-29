@@ -1,0 +1,132 @@
+/*
+ * Knowledge AI — Base Styles
+ * Tailwind + token-driven globals — Pure Black & Orange theme
+ */
+
+@import "tailwindcss";
+@import "./tokens.css";
+@import "./typography.css";
+
+/* ── Theme flash prevention ────────────────────────────────────── */
+html {
+  background-color: hsl(var(--bg));
+}
+
+/* ── Global base ───────────────────────────────────────────────── */
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: hsl(var(--fg));
+  background-color: hsl(var(--bg));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* ── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background-color: hsl(var(--accent) / 0.3);
+  color: hsl(var(--fg));
+}
+
+/* ── Focus ring ────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--fg-faint) / 0.25);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--fg-faint) / 0.45);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--fg-faint) / 0.25) transparent;
+}
+
+/* ── Tailwind theme mapping ────────────────────────────────────── */
+@theme {
+  --color-bg: hsl(var(--bg));
+  --color-surface: hsl(var(--surface));
+  --color-surface-sunken: hsl(var(--surface-sunken));
+  --color-surface-raised: hsl(var(--surface-raised));
+  --color-border: hsl(var(--border));
+  --color-border-subtle: hsl(var(--border-subtle));
+  --color-fg: hsl(var(--fg));
+  --color-fg-muted: hsl(var(--fg-muted));
+  --color-fg-faint: hsl(var(--fg-faint));
+  --color-accent: hsl(var(--accent));
+  --color-accent-fg: hsl(var(--accent-fg));
+  --color-accent-subtle: hsl(var(--accent-subtle));
+  --color-highlight: hsl(var(--highlight));
+  --color-success: hsl(var(--success));
+  --color-success-subtle: hsl(var(--success-subtle));
+  --color-warning: hsl(var(--warning));
+  --color-warning-subtle: hsl(var(--warning-subtle));
+  --color-danger: hsl(var(--danger));
+  --color-danger-subtle: hsl(var(--danger-subtle));
+  --color-info: hsl(var(--info));
+  --color-info-subtle: hsl(var(--info-subtle));
+
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}
+
+/* ── Utility classes ───────────────────────────────────────────── */
+.text-serif {
+  font-family: var(--font-serif);
+}
+
+.text-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.tracking-tight {
+  letter-spacing: -0.02em;
+}
+
+.tracking-tighter {
+  letter-spacing: -0.03em;
+}
+
+/* Hairline border utility */
+.border-hairline {
+  border-width: 1px;
+  border-color: hsl(var(--border));
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

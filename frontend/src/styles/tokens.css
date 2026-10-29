@@ -1,0 +1,140 @@
+/*
+ * Knowledge AI — Design Tokens
+ * Pure black + deep orange color system.
+ * Dark-only theme.
+ */
+
+/* ── Dark Theme — Default ──────────────────────────────────────── */
+:root {
+  /* Backgrounds — pure black */
+  --bg: 0 0% 0%;
+  --surface: 0 0% 6%;
+  --surface-sunken: 0 0% 4%;
+  --surface-raised: 0 0% 10%;
+
+  /* Borders */
+  --border: 0 0% 15%;
+  --border-subtle: 0 0% 11%;
+
+  /* Foreground */
+  --fg: 0 0% 92%;
+  --fg-muted: 0 0% 55%;
+  --fg-faint: 0 0% 38%;
+
+  /* Accent — Deep Orange */
+  --accent: 16 82% 54%;
+  --accent-fg: 0 0% 100%;
+  --accent-subtle: 16 82% 54% / 0.12;
+  --accent-hover: 16 85% 48%;
+
+  /* Highlight */
+  --highlight: 16 82% 54% / 0.18;
+
+  /* Semantic */
+  --success: 152 55% 42%;
+  --success-subtle: 152 55% 42% / 0.12;
+  --warning: 38 90% 52%;
+  --warning-subtle: 38 90% 52% / 0.12;
+  --danger: 0 72% 55%;
+  --danger-subtle: 0 72% 55% / 0.12;
+  --info: 210 70% 56%;
+  --info-subtle: 210 70% 56% / 0.12;
+
+  /* Diff */
+  --diff-added-bg: 152 55% 42% / 0.10;
+  --diff-added-fg: 152 55% 52%;
+  --diff-removed-bg: 0 72% 55% / 0.10;
+  --diff-removed-fg: 0 72% 62%;
+  --diff-modified-bg: 38 90% 52% / 0.10;
+  --diff-modified-fg: 38 90% 60%;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
+  --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.4);
+  --shadow-lg: 0 8px 24px hsl(0 0% 0% / 0.5);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Spacing */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Typography sizes */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13.5px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  --text-3xl: 42px;
+
+  /* Sidebar */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 52px;
+
+  /* Transitions */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: dark;
+}
+
+/* ── Light Theme (disabled — single theme app) ─────────────────── */
+.light {
+  --bg: 0 0% 0%;
+  --surface: 0 0% 6%;
+  --surface-sunken: 0 0% 4%;
+  --surface-raised: 0 0% 10%;
+
+  --border: 0 0% 15%;
+  --border-subtle: 0 0% 11%;
+
+  --fg: 0 0% 92%;
+  --fg-muted: 0 0% 55%;
+  --fg-faint: 0 0% 38%;
+
+  --accent: 16 82% 54%;
+  --accent-fg: 0 0% 100%;
+  --accent-subtle: 16 82% 54% / 0.12;
+
+  --highlight: 16 82% 54% / 0.18;
+
+  --success: 152 55% 42%;
+  --success-subtle: 152 55% 42% / 0.12;
+  --warning: 38 90% 52%;
+  --warning-subtle: 38 90% 52% / 0.12;
+  --danger: 0 72% 55%;
+  --danger-subtle: 0 72% 55% / 0.12;
+  --info: 210 70% 56%;
+  --info-subtle: 210 70% 56% / 0.12;
+
+  --diff-added-bg: 152 55% 42% / 0.08;
+  --diff-added-fg: 152 45% 32%;
+  --diff-removed-bg: 0 72% 55% / 0.08;
+  --diff-removed-fg: 0 62% 42%;
+  --diff-modified-bg: 38 90% 52% / 0.08;
+  --diff-modified-fg: 38 80% 36%;
+
+  --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
+  --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.4);
+  --shadow-lg: 0 8px 24px hsl(0 0% 0% / 0.5);
+
+  color-scheme: dark;
+}

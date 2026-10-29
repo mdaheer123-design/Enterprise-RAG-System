@@ -1,0 +1,2 @@
+This is a test document for enterprise RAG assistant verification.
+It contains guidelines for ISO compliance and security policies.

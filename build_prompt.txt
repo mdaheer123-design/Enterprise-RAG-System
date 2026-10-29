@@ -1,0 +1,165 @@
+<USER_REQUEST>
+sot out below problem
+# Build Prompt: Make Every Page of Knowledge AI Fully Functional
+
+My React + Vite + TypeScript frontend (Knowledge AI) has a finished app shell (sidebar, breadcrumb, ⌘K trigger, theme toggle, API status dot) and a design system ("Ink & Paper" + single ember accent, serif headings and answer text, mono metadata, hairline borders). Only Dashboard and Chat exist. The other six routes render placeholder text: "Upload Page (WIP)", "Collections Page (WIP)", "Compare Page (WIP)", "Search Page (WIP)", "Analytics Page (WIP)", "Settings Page (WIP)".
+
+**Replace every placeholder with a complete, working, API-connected page.** Keep the existing shell, tokens, fonts, and component primitives. Do not change the backend. There is no authentication and no OCR.
+
+Stack already in place: React Router, TanStack Query, TanStack Table, Axios (non-streaming calls only), react-hook-form + zod, sonner, Framer Motion, Recharts, cmdk, date-fns, lucide-react (16px, stroke 1.5).
+
+---
+
+# 0. Before building: audit and report
+
+1. Open `src/lib/api/` and list every endpoint wrapper that exists. Compare it with the contract in Section 1 and **create any missing wrapper, zod schema, and TanStack Query hook**. Put every call behind one `api` layer, and map response shapes to UI types in a thin adapter so UI code never depends on raw backend fields.
+2. Check the Vite dev proxy / `VITE_API_URL`, and fix CORS or base-path issues if the API status dot says connected but calls fail.
+3. Confirm the Chat "no response to 'hi'" bug is fixed (SSE via `fetch` + `ReadableStream`, message state machine `pending → streaming → complete | no_support | error | cancelled`, never an empty terminal state). If not, fix it first. Chat is the reference for how every async surface behaves.
+4. Report the results of 1–3 before writing pages.
+
+---
+
+# 1. API contract (adapt types to it; add mapping if the real shapes differ)
+
+* Collections: `GET /collections`, `POST /collections`, `PATCH /collections/{id}` (rename), `DELETE /collections/{id}`
+* Documents: `POST /documents/upload` (multipart: files[], collection_id), `GET /documents` (filters: collection, file_type, date range, filename, author; pagination), `DELETE /documents/{id}`, `POST /documents/compare` (two document ids)
+* Indexing status: poll `GET /documents` or the status field per document every 2s while any document is not `ready`/`failed`, and stop polling when all are terminal
+* Search: `POST /search/hybrid`, `POST /search/metadata`
+* Analytics: uploaded documents, questions asked, storage usage
+* Chat: `POST /chat/ask`, `POST /chat/stream`, `GET /chat/history`
+
+If a needed endpoint does not exist (for example a rename route, a settings endpoint, or time-series analytics), do NOT fake it silently. Implement the page against a typed `api` function, add a clearly marked `// BACKEND-GAP` comment, fall back to the best available data (client-side aggregation, or localStorage for settings), and list every gap in the final report.
+
+---
+
+# 2. Shared building blocks (create first, reuse everywhere)
+
+* `PageContainer` (`mx-auto w-full max-w-[1200px] px-6 py-8 lg:px-10 space-y-8`) and `PageHeader` (serif title 28px, one-line muted description, right-aligned actions slot, stacks on mobile). Every page uses these.
+* `EmptyState` (specific title, one-line description, primary action, optional secondary), with no icon-in-a-rounded-square pattern. `ErrorState` (readable message, Retry, expandable technical details). `TableSkeleton`, `CardSkeleton`.
+* `FileGlyph` (PDF / DOCX / TXT / CSV / XLSX, as small mono-labelled glyphs, not colorful icons), `StatusBadge` (Queued / Uploaded / Indexing / Ready / Failed, always with a text label), `ScoreBar`, `Kbd`, `ConfirmDialog` (with a typed-confirmation variant), `DataTable` (TanStack Table wrapper: sorting, column visibility, row selection, sticky header, `px-4 py-3` cells, row hover, rounded bordered wrapper, `overflow-x-auto`), `FilterChips`, `ScopeSelect` (collection or documents, persisted via `useScope`).
+* `useDocuments`, `useCollections`, `useUploadQueue`, `useSettings`, `useAnalytics` hooks. All mutations use optimistic updates where safe, and every mutation shows a sonner toast with undo for deletes (soft-delete window of 5s before the API call fires, or a clear confirm dialog if the backend can't undo).
+
+Every page needs four visible states: **loading (skeleton matching the layout), empty (specific and actionable), error (retry plus details), success.**
+
+---
+
+# 3. Upload page (`/upload`)
+
+* **Drop zone:** a full-width dashed region (`rounded-[10px] border border-dashed`), with a drag-over state (accent border plus 8% accent background), click to browse, multi-select, and folder drop. It shows accepted formats in mono: `PDF · DOCX · TXT · CSV · XLSX · XLS` and a max size (a config constant, default 50 MB).
+* **Target collection:** a select next to the drop zone with an inline "New collection" option that opens a small dialog (zod-validated name, 2–60 chars, unique). Uploading is blocked until a collection is chosen (default: last used, stored in localStorage).
+* **Client validation before upload:** type, size, empty file, and duplicate filename in the same batch or collection (warn, with "Replace" or "Skip"). Inline readable errors per file.
+* **Upload queue (DataTable):** file glyph, name, size, collection, per-file determinate progress (Axios `onUploadProgress`; upload files with limited concurrency, 3 at a time), then a **pipeline stepper** per file: `Uploaded → Cleaned → Chunked → Embedded → Indexed`, driven by the backend status field via polling. Show failure reason, **Retry** and **Remove** actions, a "Cancel upload" action (AbortController) for in-flight files, and a "Clear completed" button.
+* After all files are indexed, show a success strip: "12 documents indexed in Leave Policies" with **Ask about these documents** (navigates to `/chat` with the scope preset) and **Upload more**.
+* Below the queue: **Recently uploaded** (last 10 documents) so the page is never empty after a refresh.
+* Leaving the page while uploads are running triggers a `beforeunload` warning.
+
+# 4. Collections (`/collections` and `/collections/:id`)
+
+* **List page:** a list/grid toggle (persisted). The list is a DataTable with name, description, document count, total size, last updated, and a file-type composition bar. The grid is a card per collection with the same data. Actions: "New collection" (header), row menu (Rename, Edit description, Delete). Search box filters client-side.
+* **Create / rename dialogs:** react-hook-form + zod, with inline errors and server error mapping (duplicate name).
+* **Delete:** a typed-confirmation dialog (type the collection name), with a warning that lists how many documents will be affected, and the choice "Delete documents too / Move documents to…".
+* **Detail page:** header (name, description, stats), primary action **Chat with this collection** (sets scope and navigates), secondary **Upload here**. A documents table (sortable, filter by file type and date, filename search, bulk select with **bulk delete** and **move to collection**), per-row actions (Open in viewer, Ask about this, Delete). A document opens in the shared **Source/Document Viewer** sheet (react-pdf for PDFs, a text view for TXT, a table view for CSV/Excel, and a rendered text view for DOCX) with a metadata drawer: filename, collection, upload date, author if available, pages, chunk count.
+* Empty collection: "No documents in this collection yet" with an Upload action.
+
+# 5. Compare (`/compare`)
+
+* **Step 1: select.** Two document pickers (searchable combobox grouped by collection) labelled "Original" and "Revised", with a swap button. Auto-suggest pairs with similar names (`Contract_v1` / `Contract_v2`). The Compare button is disabled until two different documents are chosen. You can also upload a file directly into a slot (reuses the upload flow).
+* **Step 2: run.** Call `POST /documents/compare`, show a progress state, handle errors, and **save the result by id** so it is revisitable (list "Recent comparisons" below the selectors, from `GET` if available, else localStorage).
+* **Results:**
+  * Summary strip: counts of Added / Removed / Modified, plus counts of changed dates, numbers, and salary figures.
+  * **Key changes** list: structured rows (type, label, `before → after`, location), each clickable to jump to its place in the diff.
+  * **Side-by-side diff:** two synchronized scroll panes, clause-level alignment, word-level highlighting inside modified clauses, change minimap along the scrollbar, `J` / `K` to jump between changes, and a Side-by-side / Unified toggle. Added = green tint, removed = red tint, modified = amber tint, each with a text or icon label (never color alone).
+  * Filters: All / Added / Removed / Modified / Dates / Numbers.
+  * **Export PDF:** a dedicated print stylesheet (`@media print`) that renders the summary, key changes, and diff cleanly, triggered by `window.print()` or a generated PDF, with a filename like `Contract_v1_vs_v2.pdf`.
+* If the backend returns only raw text for both versions, compute the diff client-side (a `diff.ts` utility using `diff-match-patch` or `jsdiff`, with unit tests) and detect dates and currency/number changes with regexes (unit tested).
+
+# 6. Search (`/search`)
+
+* **Toolbar (one row, wraps cleanly on mobile):** a `flex-1` input with a properly padded leading icon (`pl-10`), a Top-K select (5/10/20/50), a mode toggle (Hybrid / Keyword / Semantic if the API supports it), and a primary Search button. Search on Enter, debounce only for "search as you type" if enabled. Sync the query and filters to the URL (`/search?q=…&k=10&collection=…`) so results are shareable and survive refresh.
+* **Filters:** a collapsible rail or row: collection, file type, upload-date range, filename, author. Active filters appear as removable chips with a "Clear all" action. Filter-only searches (no query) call `/search/metadata`.
+* **Results:** grouped by document (collapsible), each result showing filename, collection, page and paragraph, a snippet with **matched keywords highlighted** (a `highlight.ts` utility, unit tested, XSS-safe: never use `dangerouslySetInnerHTML` with raw text), and a score breakdown (dense / BM25 / fused / reranked as a tiny stacked bar plus mono values). Actions: **Open in viewer** (opens the Source Viewer with the passage highlighted), **Ask about this** (starts a chat scoped to that document, prefilled), and **Copy citation**.
+* Virtualize long result lists with `@tanstack/react-virtual`, and show "Showing 10 of N".
+* States: initial (example queries pulled from the user's document names, clickable), loading (skeleton results), no results (tips plus "Clear filters" and "Broaden to all collections"), and error (retry).
+* Recent searches (the last 8, localStorage) shown under the input when it is focused and empty.
+
+# 7. Analytics (`/analytics`)
+
+* **Date range** picker (7d / 30d / 90d / Custom), synced to the URL.
+* **KPI strip** (compact, mono numerals, delta vs the previous period): Documents, Collections, Questions asked, Storage used, Avg retrieval confidence, "No answer found" rate.
+* **Charts** (Recharts, restyled: hairline grid, thin 1.5px lines, direct labels instead of legends where possible, custom tooltips, accent as the first series and neutrals after, `ResponsiveContainer` inside fixed-height wrappers, skeleton while loading, a designed empty state): questions over time, documents by type, storage by collection, top-cited documents (a horizontal bar), and retrieval confidence distribution.
+* Use whichever data the analytics endpoints return. Where time-series data is missing, derive it from chat history and document `created_at` fields on the client, and flag it with `// BACKEND-GAP`.
+* An "Export CSV" action for each chart's data.
+
+# 8. Settings (`/settings`)
+
+* A two-column layout: a section nav on the left (stacks on mobile), forms on the right, with the active section synced to the URL hash.
+* **Retrieval:** chunk size (200–2000, step 50), chunk overlap (0–500, must be less than the chunk size), initial top-k (5–50), rerank top-n (1–10, must be ≤ top-k), fusion method (RRF or weighted, with a weight slider shown only for weighted), and similarity threshold (0–1 slider with a live plain-language explanation: "Answers are blocked when the best passage scores below 0.35").
+* **Generation:** model select, temperature (0–1), streaming on/off.
+* **Appearance:** theme (Light / Dark / System), density (Comfortable / Compact, applied through a root class that changes row heights and spacing tokens).
+* **Data:** storage usage, a "Clear chat history" action (typed confirm), and "Re-index all documents" if the API supports it.
+* **Keyboard shortcuts:** a read-only reference table generated from `config/shortcuts.ts` (the single source for the sidebar hints, the `?` dialog, and this table).
+* Use react-hook-form + zod with cross-field validation, a sticky **Unsaved changes** bar (Save / Discard), and "Reset to defaults" per section. Load and save via the settings API if it exists. Otherwise persist to localStorage and expose the values to the chat and search requests through a `useSettings` hook so they actually take effect (send them as request params), marked `// BACKEND-GAP`.
+
+# 9. Dashboard and Chat completion
+
+* **Dashboard:** replace anything stubbed with live data, using the layout from the original spec: a one-line mono system summary, a compact KPI strip, "Continue where you left off" (last 3 chats), "Recently indexed" (dense table), a storage meter (a stacked bar by file type), an indexing queue with live progress, and a first-run 3-step checklist (Create collection → Upload documents → Ask a question) shown when there are no documents.
+* **Chat:** wire in the scope selector, the Source panel (the shared viewer with citation highlighting), citation markers and the source strip, the retrieval trace ("How this was answered"), message actions (copy, regenerate, thumbs), follow-up suggestions, and the conversation list with rename and delete, grouped Today / Yesterday / Earlier.
+* **Sidebar additions:** a "Recent chats" list (the last 5) and the scope switcher under the nav. Always show the shortcut hints (muted), not only on hover. Fix the clipped API status label in the footer ("API connected" / "API unreachable at {baseUrl}").
+* **Command palette (⌘K):** make it real. Pages, new chat, jump to any collection or document (live search), run a search with the typed text, toggle theme, and switch scope. Keyboard only, grouped results.
+* **Global shortcuts** working: `⌘K`, `⌘/`, `⌘⇧O`, `G` then `D/C/U/L/P/S/A/T` (add Compare and Settings), `?`, `Esc`.
+
+---
+
+# 10. Cross-cutting requirements
+
+* **Routing:** lazy-loaded routes, a 404 page, route-level error boundaries, and `document.title` per page ("Upload · Knowledge AI").
+* **Responsive:** verified at 360 / 768 / 1024 / 1440 / 1920px, with no overlap, clipping, or horizontal scroll. Tables scroll inside their own wrapper. The mobile sidebar is a drawer.
+* **Accessibility:** WCAG AA in both themes, ember focus rings, labelled icon buttons, dialog focus trapping, status text never conveyed by color alone, and live regions for upload progress and streaming.
+* **Performance:** virtualized lists, memoized rows, debounced inputs (250ms), prefetch on hover for collection and document routes, and a stable `queryKey` factory.
+* **Security:** never render document text as raw HTML. Sanitize any markdown and highlight output, and validate file types by extension and MIME.
+* **Design discipline:** keep the "Ink & Paper" rules: no gradients, glow, sparkle icons, or emojis. Ember is used only for primary actions, the active nav marker, citation markers, focus rings, and key chart series. Hairline borders, 6px control radius, 10px card radius.
+* **No dead UI:** every button, menu item, and link must do something real or be removed. No "WIP", "Coming soon", or lorem ipsum anywhere.
+
+# 11. Testing
+
+* Vitest unit tests: SSE parser, `diff.ts`, `highlight.ts`, the settings zod schemas (including cross-field rules), and the upload validation helpers.
+* Component tests (Testing Library + MSW): upload queue (success, failure, retry), collection CRUD, search with filters and URL sync, the compare flow, and the settings dirty bar.
+* One Playwright smoke test for the critical path: create collection → upload a sample PDF → wait for Indexed → ask a question → open a citation → see the highlighted passage → run a search → compare two documents.
+* Provide MSW handlers and sample fixtures (3 collections, 12 documents across all file types, a streamed answer with citations, a compare result, and analytics series) so every page runs without the backend with `VITE_USE_MOCKS=true`.
+
+# 12. Acceptance checklist
+
+- [ ] No page renders placeholder text, and every route is a complete screen.
+- [ ] Upload → indexing status → ask in Chat → open the highlighted citation works end to end against the real backend.
+- [ ] Create, rename, and delete collections, and move and delete documents, all work, with optimistic updates and undo or confirm.
+- [ ] Compare produces a summary, key changes, a synced side-by-side diff, and a PDF export.
+- [ ] Search is URL-synced, filterable, highlights keywords, and opens results in the viewer.
+- [ ] Analytics charts render from real data, with skeleton, empty, and error states.
+- [ ] Settings validate, persist, and demonstrably change retrieval behavior.
+- [ ] ⌘K palette and the global shortcuts work.
+- [ ] No horizontal scroll at the five breakpoints, and both themes are complete.
+- [ ] Tests pass, and there are no `any` types and no console errors.
+
+# Deliverables
+
+1. The audit report from Section 0 (existing endpoints, gaps, fixes).
+2. All new and changed code, organized in `features/{upload,collections,compare,search,analytics,settings,dashboard,chat,viewer}` with shared components and hooks as above.
+3. MSW mocks and fixtures.
+4. A **BACKEND-GAP list**: every endpoint or field the UI needed that the backend lacks, with a suggested request and response shape.
+5. A short changelog and a self-audit against the acceptance checklist.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-06T21:51:02+05:30.
+
+The user's current state is as follows:
+Active Document: c:\Users\mdahe\OneDrive\Desktop\Project\RAG\backend\.env (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 27
+Other open documents:
+- c:\Users\mdahe\OneDrive\Desktop\Project\RAG\backend\.env (LANGUAGE_UNSPECIFIED)
+- c:\Users\mdahe\OneDrive\Desktop\Project\RAG\README.md (LANGUAGE_MARKDOWN)
+- c:\Users\mdahe\OneDrive\Desktop\Project\RAG\docker-compose.yml (LANGUAGE_YAML)
+- c:\Users\mdahe\OneDrive\Desktop\Project\RAG\backend\requirements.txt (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from Gemini 3.8 Flash (Medium) to Claude Opus 4.6 (Thinking). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>
