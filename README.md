@@ -155,7 +155,7 @@ npm install
 npm run dev
 ```
 
-Visit **http://localhost:5173**
+Visit `http://localhost:5173`
 
 ---
 
@@ -173,11 +173,11 @@ docker compose down
 ```
 
 Services:
-- **Frontend**: http://localhost:3000
-- **Backend**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **PostgreSQL**: localhost:5432
-- **ChromaDB**: localhost:8100
+- **Frontend**: `http://localhost:3000`
+- **Backend**: `http://localhost:8000`
+- **API Docs**: `http://localhost:8000/docs`
+- **PostgreSQL**: `localhost:5432`
+- **ChromaDB**: `localhost:8100`
 
 ---
 
@@ -244,7 +244,7 @@ Services:
 |--------|----------|-------------|
 | GET | `/api/analytics/overview` | Dashboard metrics |
 
-Full interactive docs at: **http://localhost:8000/docs**
+Full interactive docs at: `http://localhost:8000/docs` (after starting the backend)
 
 ---
 
