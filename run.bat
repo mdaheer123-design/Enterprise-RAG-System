@@ -13,11 +13,11 @@ echo.
 :: 1. Cleanup any stale processes on ports 8000 and 5173
 echo [*] Checking for previous instances on ports 8000 and 5173...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING 2^>nul') do (
-    echo [!] Releasing occupied port 8000 (PID: %%a)...
+    echo [!] Releasing occupied port 8000 [PID: %%a]
     taskkill /F /PID %%a >nul 2>&1
 )
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING 2^>nul') do (
-    echo [!] Releasing occupied port 5173 (PID: %%a)...
+    echo [!] Releasing occupied port 5173 [PID: %%a]
     taskkill /F /PID %%a >nul 2>&1
 )
 
@@ -98,7 +98,7 @@ if %errorlevel% neq 0 (
 
 :: Check if frontend node_modules exists
 if not exist "%~dp0frontend\node_modules" (
-    echo [*] Installing frontend packages (first run)...
+    echo [*] Installing frontend packages [first run]...
     cd /d "%~dp0frontend"
     call npm install
     cd /d "%~dp0"
@@ -106,18 +106,20 @@ if not exist "%~dp0frontend\node_modules" (
 
 :: 5. Launch Backend Server in background window
 echo [1/2] Launching Backend Server on http://127.0.0.1:8000 ...
-start "RAG Assistant - Backend (:8000)" cmd /k "cd /d "%~dp0backend" && "%PYTHON_CMD%" -m uvicorn app.main:app --port 8000 --host 127.0.0.1"
+set "BACKEND_DIR=%~dp0backend"
+set "FRONTEND_DIR=%~dp0frontend"
+start "RAG Assistant - Backend [Port 8000]" cmd /k "cd /d "%BACKEND_DIR%" && "%PYTHON_CMD%" -m uvicorn app.main:app --port 8000 --host 127.0.0.1"
 
 :: 6. Launch Frontend Dev Server in background window
 echo [2/2] Launching Frontend Server on http://localhost:5173 ...
-start "RAG Assistant - Frontend (:5173)" cmd /k "cd /d "%~dp0frontend" && call npm run dev"
+start "RAG Assistant - Frontend [Port 5173]" cmd /k "cd /d "%FRONTEND_DIR%" && call npm run dev"
 
 :: 7. Wait for Backend to be healthy
 echo.
 echo [*] Waiting for services to initialize (loading ML models)...
 set /a ATTEMPTS=0
 :WAIT_BACKEND
-timeout /t 1 /nobreak >nul
+timeout /t 1 /nobreak >nul 2>&1 || ping -n 2 127.0.0.1 >nul
 set /a ATTEMPTS+=1
 curl -s -m 2 http://127.0.0.1:8000/health >nul 2>&1
 if %errorlevel% equ 0 (
@@ -131,7 +133,7 @@ if %ATTEMPTS% geq 30 (
 goto WAIT_BACKEND
 
 :OPEN_APP
-timeout /t 2 /nobreak >nul
+timeout /t 2 /nobreak >nul 2>&1 || ping -n 3 127.0.0.1 >nul
 echo [OK] Opening Application in your default browser...
 start http://localhost:5173/
 
@@ -169,7 +171,7 @@ if "%CHOICE%"=="3" (
     echo [*] Restarting Backend Server...
     for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING 2^>nul') do taskkill /F /PID %%a >nul 2>&1
     timeout /t 1 /nobreak >nul
-    start "RAG Assistant - Backend (:8000)" cmd /k "cd /d "%~dp0backend" && "%PYTHON_CMD%" -m uvicorn app.main:app --port 8000 --host 127.0.0.1"
+    start "RAG Assistant - Backend [Port 8000]" cmd /k "cd /d "%BACKEND_DIR%" && "%PYTHON_CMD%" -m uvicorn app.main:app --port 8000 --host 127.0.0.1"
     echo [OK] Backend restarted.
     timeout /t 2 /nobreak >nul
     goto MENU_LOOP
@@ -178,7 +180,7 @@ if "%CHOICE%"=="4" (
     echo [*] Restarting Frontend Server...
     for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING 2^>nul') do taskkill /F /PID %%a >nul 2>&1
     timeout /t 1 /nobreak >nul
-    start "RAG Assistant - Frontend (:5173)" cmd /k "cd /d "%~dp0frontend" && call npm run dev"
+    start "RAG Assistant - Frontend [Port 5173]" cmd /k "cd /d "%FRONTEND_DIR%" && call npm run dev"
     echo [OK] Frontend restarted.
     timeout /t 2 /nobreak >nul
     goto MENU_LOOP
@@ -196,11 +198,11 @@ echo           Stopping Enterprise AI Knowledge Assistant
 echo ======================================================================
 echo.
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING 2^>nul') do (
-    echo [*] Stopping Backend process (PID: %%a)...
+    echo [*] Stopping Backend process [PID: %%a]
     taskkill /F /PID %%a >nul 2>&1
 )
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING 2^>nul') do (
-    echo [*] Stopping Frontend process (PID: %%a)...
+    echo [*] Stopping Frontend process [PID: %%a]
     taskkill /F /PID %%a >nul 2>&1
 )
 echo.
